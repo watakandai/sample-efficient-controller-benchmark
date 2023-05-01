@@ -1,0 +1,36 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Example Voronoi",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/examples/voronoi/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "/home/kandai/Documents/projects/dev/ControlLyapunovFunctionPlanners/build/Unicycle", "2d"
+                // "--pathToExecutable", "/home/kandai/Documents/projects/dev/ControlLyapunovFunctionPlanners/build/Unicycle",
+                // "--system", "2d"
+            ]
+        },
+        {
+            "name": "Python: voronoi",
+            "type": "python",
+            "request": "launch",
+            "module": "sciab.voronoi",
+            "justMyCode": true
+        },
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
+    ]
+}

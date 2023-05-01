@@ -1,0 +1,13 @@
+Metadata-Version: 2.1
+Name: sciab
+Version: 0.1.0
+Summary: Benchmark for comparing (sample efficient) stable-controller inference algorithms
+Home-page: https://github.com/watakandai/sample-efficient-controller-benchmark
+Author: Kandai Watanabe
+Author-email: kandai.wata@gmail.com
+License: UNKNOWN
+Platform: UNKNOWN
+License-File: LICENSE
+
+UNKNOWN
+

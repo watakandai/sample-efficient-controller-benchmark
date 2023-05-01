@@ -1,0 +1,8 @@
+LICENSE
+README.md
+setup.py
+sciab.egg-info/PKG-INFO
+sciab.egg-info/SOURCES.txt
+sciab.egg-info/dependency_links.txt
+sciab.egg-info/requires.txt
+sciab.egg-info/top_level.txt
