@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from ..countersampler.base import CounterExample
 from ..controller.base import Controller
+from ..env.omplenv import OMPLEnv
 
 
 # class TrainerArguments(metaclass=ABCMeta):
@@ -10,7 +11,13 @@ from ..controller.base import Controller
 
 class Trainer(metaclass=ABCMeta):
     """Trainer samples a trajectory and updates the controller"""
-    _controller: Controller = None
+    controller: Controller = None
+    env: OMPLEnv = None
+
+    @abstractmethod
+    def __init__(self, env: OMPLEnv) -> Controller:
+        self.env = env
+
 
     @abstractmethod
     def train(self, counterexample: CounterExample) -> Controller:

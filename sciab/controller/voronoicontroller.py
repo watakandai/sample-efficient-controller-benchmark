@@ -8,15 +8,15 @@ class VoronoiNode:
     """Node of the Voronoi Treemap
     A node contains the current datapoint in the region.
     """
-    x: List[float]
-    u: List[float]
-    A: np.ndarray
-    b: np.array
-    alpha: np.ndarray
-    beta: float
-    parent: Type['VoronoiNode']
-    left: Type['VoronoiNode']
-    right: Type['VoronoiNode']
+    x: List[float] = None
+    u: List[float] = None
+    A: np.ndarray = None
+    b: np.array = None
+    alpha: np.ndarray = None
+    beta: float = 0.0
+    parent: Type['VoronoiNode'] = None
+    left: Type['VoronoiNode'] = None
+    right: Type['VoronoiNode'] = None
 
     def __init__(self, x, u, A, b):
         self.x = x
@@ -48,8 +48,31 @@ class VoronoiNode:
 
     # TODO:
     @staticmethod
-    def computeHyperPlane(x1, x2):
-        pass
+    def computeHyperPlane(x1: np.ndarray, x2: np.ndarray):
+        """Compute the hyperplane between two points
+        a^T * x + b = 0, then x is on the hyperplane
+        a^T * x + b > 0, if x is on x2's side
+        a^T * x + b < 0, if x is on x1's side
+
+        Args:
+            x1 (np.ndarray): _description_
+            x2 (np.ndarray): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        if all(x1 == x2):
+            raise Exception("Two points cannot be the same for computing hyperplane")
+
+        # Compute the vector between the two points
+        v = x2 - x1
+        # Compute the unit vector in the direction of v
+        u = v / np.linalg.norm(v)
+        # Compute the equation of the hyperplane
+        a = u
+        xc = (x1 + x2) / 2
+        b = -np.dot(u, xc)
+        return a, b
 
     def isLeft(self, x) -> bool:
         return np.dot(self.alpha, x) <= self.beta
@@ -62,7 +85,7 @@ class VoronoiNode:
 
 class VoronoiController(Controller):
     """Controller struct"""
-    root: VoronoiNode
+    root: VoronoiNode = None
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -88,5 +111,10 @@ class VoronoiController(Controller):
     def update(self, X, U, Dt) -> List[float]:
         if len(X) == 0 or len(U) == 0:
             raise Exception("A trajectory cannot be empty")
+
         x, u = X[0], U[0]
-        self.root.addPoint(x, u)
+
+        if self.root is None:
+            self.root = VoronoiNode(x, u, np.array([]), np.array([]))
+        else:
+            self.root.addPoint(x, u)

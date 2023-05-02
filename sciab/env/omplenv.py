@@ -1,97 +1,107 @@
-import subprocess
-import gymnasium as gym
-from gymnasium import spaces
+import os
+import re
+import shlex
+import subprocess as sp
 import numpy as np
-from typing import List, Tuple
+import gymnasium as gym
+from functools import reduce
+from gymnasium.envs.registration import register
+from typing import List, Tuple, Any, Dict, Union
+
 from .base import Env, EnvArguments
 from .. import SimStatus
 
+def flatten(nestedList: List[List[float]]) -> List[float]:
+    return reduce(lambda x, y: x + y, nestedList)
 
-class OMPLEnvArguments(EnvArguments):
-    def __init__(self, system: str,
-                       pathToExecutable: str,
-                       # Make the followings optional
-                       start: List[float]=None,
-                       goalLowerBound: List[float]=None,
-                       goalUpperBound: List[float]=None,
-                       safeLowerBound: List[float]=None,
-                       safeUpperBound: List[float]=None,
-                       controlLowerBound: List[float]=None,
-                       controlUpperBound: List[float]=None,
-                       runTime: int=1,
-                       selectionRadius: float=0.6,
-                       pruningRadius: float=0.08,
-                       propagationStepSize: float=0.1,
-                       controlDurationBound: List[int]=[1, 10],
-                       planner: str="SST",
-                       objective: str="PathLengthObjWithCostToGo",
-                       file: str="path.txt",
+npToStr = lambda arr : " ".join(map(lambda x: f"{x:.2f}", arr))
+
+
+class OMPLEnv(gym.Env):
+    def __init__(self, pathToExecutable: str,
+                       initLowerBound: List[float],
+                       initUpperBound: List[float],
+                       goalLowerBound: List[float],
+                       goalUpperBound: List[float],
+                       safeLowerBound: List[float],
+                       safeUpperBound: List[float],
+                       controlLowerBound: List[float],
+                       controlUpperBound: List[float],
+                       system: str,
+                       sampleBinName: str="sampleOMPL",
+                       stepBinName: str="stepOMPL",
+                       outputFile: str="path.txt",
+                       omplkwargs: Dict[str, str]={},
                        **kwargs):
+        super(OMPLEnv, self).__init__(**kwargs)
+
+        self.observation_space =  gym.spaces.Box(low=np.array(safeLowerBound),
+                                    high=np.array(safeUpperBound),
+                                    dtype=np.float32)
+        self.action_space = gym.spaces.Dict({
+            "action": gym.spaces.Discrete(1),
+            "control": gym.spaces.Box(low=np.array(controlLowerBound),
+                                      high=np.array(controlUpperBound),
+                                      dtype=np.float32)})
+
         # Required Arguments
-        self.system = system
         self.pathToExecutable = pathToExecutable
-        self.start = start
-        self.goalLowerBound = goalLowerBound
-        self.goalUpperBound = goalUpperBound
-        self.safeLowerBound = safeLowerBound
-        self.safeUpperBound = safeUpperBound
-        self.controlLowerBound = controlLowerBound
-        self.controlUpperBound = controlUpperBound
-        # Optional Arguments
-        self.runTime = runTime
-        self.selectionRadius = selectionRadius
-        self.pruningRadius = pruningRadius
-        self.propagationStepSize = propagationStepSize
-        self.controlDurationBound = controlDurationBound
-        self.planner = planner
-        self.objective = objective
-        self.file = file
+        self.initLowerBound = np.array(initLowerBound)
+        self.initUpperBound = np.array(initUpperBound)
+        self.goalLowerBound = np.array(goalLowerBound)
+        self.goalUpperBound = np.array(goalUpperBound)
+        self.safeLowerBound = np.array(safeLowerBound)
+        self.safeUpperBound = np.array(safeUpperBound)
+        self.controlLowerBound = np.array(controlLowerBound)
+        self.controlUpperBound = np.array(controlUpperBound)
 
-        super().__init__(**kwargs)
+        self.system = system
+        self.sampleBinName = sampleBinName
+        self.stepBinName = stepBinName
+        self.outputFile = outputFile
+        self.kwargs = omplkwargs
+        self.mode = 1       # always start from 1
+        self.state = None   # state is None at the beginning
 
-
-class OMPLEnvWrapper(gym.Wrapper):
-    pass
-
-
-class OMPLEnv(Env):
-    def __init__(self, args: OMPLEnvArguments):
-        super().__init__(args)
-
-    def sample(self, x: List[float]):
-        pathToExecutable = self.args.pathToExecutable
-        args = ["--system",                 self.args.system,
-                "--start",                  self.args.start,
-                "--goal",                   self.args.goal,
-                "--goalLowerBound",         self.args.goalLowerBound,
-                "--goalUpperBound",         self.args.goalUpperBound,
-                "--safeLowerBound",         self.args.safeLowerBound,
-                "--safeUpperBound",         self.args.safeUpperBound,
-                "--controlLowerBound",      self.args.controlLowerBound,
-                "--controlUpperBound",      self.args.controlUpperBound,
-                "--runTime",                self.args.runTime,
-                "--goalBias",               self.args.goalBias,
-                "--selectionRadius",        self.args.selectionRadius,
-                "--pruningRadius",          self.args.pruningRadius,
-                "--propagationStepSize",    self.args.propagationStepSize,
-                "--controlDurationBound",   self.args.controlDurationBound,
-                "--planner",                self.args.planner,
-                "--objective",              self.args.objective,
-                "--file",                   self.args.file]
+    def runBinary(self, pathToExecutable: str, **kwargs):
+        flatten = lambda nestedList: reduce(lambda x, y: x + y, nestedList)
+        args = flatten([[f"--{k}={v}"] for k, v in kwargs.items()])
 
         commandList = [pathToExecutable] + args
-        process = subprocess.Popen(commandList, stdout=subprocess.PIPE)
-        output, error = process.communicate()
+        args = shlex.split(" ".join(commandList))
+
+        p = sp.run(args, stdout=sp.PIPE, stderr=sp.PIPE)
+
+        # if p.returncode != 0:
+        #     raise Exception(str(p.stderr.decode()))
+
+        return p.stdout.decode()
+
+    def sample(self, x: List[float]):
+
+        x0 = self.randX0()
+        kwargs = {"system":            self.system,
+                  "start":             npToStr(x0),
+                  "goalLowerBound":    npToStr(self.goalLowerBound),
+                  "goalUpperBound":    npToStr(self.goalUpperBound),
+                  "lowerBound":        npToStr(self.safeLowerBound),
+                  "upperBound":        npToStr(self.safeUpperBound),
+                  "controlLowerBound": npToStr(self.controlLowerBound),
+                  "controlUpperBound": npToStr(self.controlUpperBound)}
+        kwargs.update(self.kwargs)
+
+        pathToExecutable = os.path.join(self.pathToExecutable, self.sampleBinName)
+        output = self.runBinary(pathToExecutable, **kwargs)
 
         print("="*100)
         print(output)
         print("="*100)
 
-        if "Found a solution" in output and\
-            "Solution is approximate" not in output:
-            data = np.loadtxt(self.args.file)
-            nx = len(self.args.safeLowerBound)
-            nu = len(self.args.controlLowerBound)
+        if "Found a solution" in output: # and\
+            # "Solution is approximate" not in output:
+            data = np.loadtxt(self.outputFile)
+            nx = len(self.initLowerBound)
+            nu = len(self.controlLowerBound)
             X = data[:, :nx]
             U = data[:, nx:nx+nu]
             Dt = data[:, -1]
@@ -101,50 +111,155 @@ class OMPLEnv(Env):
         return [], [], []
 
     def inTerminal(self, x):
-        return all(self.termSet.lb <= x) and all(x <= self.termSet.ub)
+        return all(self.goalLowerBound <= x) and all(x <= self.goalUpperBound)
 
     def outOfBound(self, x):
-        return any(x < self.workspace.lb) or any(self.workspace.ub < x)
+        return any(x < self.safeLowerBound) or any(self.safeUpperBound < x)
 
-    def maxReached(self):
-        return self.currStep >= self.numStep
+    def randX0(self) -> List[float]:
+        numState = len(self.initLowerBound)
+        return self.initLowerBound + self.np_random.random(numState) * (self.initUpperBound - self.initLowerBound)
 
-    def reset(self) -> List[float]:
-        # TODO:
-        numState = 1
-        x = self.initSet.lb + np.random.rand(numState) * (self.initSet.ub - self.initSet.lb)
-        while self.inTerminal(x):
-            x = self.initSet.lb + np.random.rand(numState) * (self.initSet.ub - self.initSet.lb)
-        return x
+    def reset(self, seed=None, options=None) -> List[float]:
+        super().reset(seed=seed)
+        state = self.randX0()
+        while self.inTerminal(state) or self.outOfBound(state):
+            state = self.randX0()
+        self.state = state
+        return self._get_obs()
 
-    def step(self, a: List[float]) -> Tuple[List[float], float, bool, dict]:
+    def _get_obs(self):
+        # return {"mode": self.mode, "state": self.state}
+        return self.state
 
-        # TODO:
-        next_x = self.dynamics(self.x, a)
+    def _get_info(self):
+        return {"status": SimStatus.SIM_INFEASIBLE}
 
-        reward = 0
+    def step(self, action: Union[int, List[float]]) -> Tuple[List[float], float, bool, dict]:
+
+        if isinstance(action, int):
+            a = action
+            u = np.zeros(len(self.controlLowerBound))
+        elif isinstance(action, List) or isinstance(action, np.ndarray):
+            u = action
+            a = 1
+        else:
+            raise Exception("Invalid action type")
+
+        if self.state is None:
+            raise Exception("You must call reset() before calling step()")
+
+        pathToExecutable = os.path.join(self.pathToExecutable, self.stepBinName)
+        kwargs = {"system":            self.system,
+                  "state":             npToStr(self.state),
+                  "mode":              str(self.mode),
+                  "action":            str(a),
+                  "control":           npToStr(u)}
+        output = self.runBinary(pathToExecutable, **kwargs)
+
+        mode_pattern = r"q=(\d+)" # This pattern matches "q=int"
+        # x_pattern = r'x=([\d\.\-\s]+)' # This pattern matches "x=double1 double2 ..."
+        x_pattern = r'x=([\d\.\-e ]+)'
+        mode_match = re.search(mode_pattern, output) # Search for the mode pattern in the string.
+        x_match = re.search(x_pattern, output) # Search for the x pattern in the string.
+
+        if mode_match and x_match:
+            self.mode = int(mode_match.group(1)) # Convert the matched mode to an integer.
+            self.state = [float(s) for s in x_match.group(1).split()] # Convert the matched groups to a list of floats.
+        else:
+            raise Exception("No match found.")
+
         done = False
-        info = {}
+        truncated = False
+        info = self._get_info()
+        info["output"] = output
 
-        if self.inTerminal(next_x):
+        if self.inTerminal(self.state):
             info["status"] = SimStatus.SIM_TERMINATED
             done = True
-        elif self.outOfBound(next_x):
+        elif self.outOfBound(self.state):
             info["status"] = SimStatus.SIM_UNSAFE
-            done = True
-        elif self.maxReached():
-            info["status"] = SimStatus.SIM_MAX_ITER_REACHED
+            truncated = True
             done = True
 
-        return next_x, reward, done, info
+        reward = int(done)
+        return self._get_obs(), reward, done, truncated, info
 
 
-from gymnasium.envs.registration import register
+class DubinsCar(OMPLEnv):
+    def __init__(self, pathToExecutable: str,
+                       initLowerBound: List[float]=[-0.05, 0.95, -0.05],
+                       initUpperBound: List[float]=[ 0.05, 1.05,  0.05],
+                       goalLowerBound: List[float]=[1.0, -0.1, -0.1],
+                       goalUpperBound: List[float]=[2.0,  0.1,  0.1],
+                       safeLowerBound: List[float]=[-0.5, -0.5, -np.pi],
+                       safeUpperBound: List[float]=[ 2.0,  2.0,  np.pi],
+                       controlLowerBound: List[float]=[-0.1],
+                       controlUpperBound: List[float]=[ 0.1],
+                       **kwargs):
+        super().__init__(pathToExecutable,
+                         initLowerBound,
+                         initUpperBound,
+                         goalLowerBound,
+                         goalUpperBound,
+                         safeLowerBound,
+                         safeUpperBound,
+                         controlLowerBound,
+                         controlUpperBound,
+                         system="DubinsCar",
+                         **kwargs)
 
+
+class DubinsCarWithAcceleration(OMPLEnv):
+    def __init__(self, pathToExecutable: str,
+                       initLowerBound: List[float]=[-0.05, 0.95, -0.05],
+                       initUpperBound: List[float]=[ 0.05, 1.05,  0.05],
+                       goalLowerBound: List[float]=[1.0, -0.1, -0.1],
+                       goalUpperBound: List[float]=[2.0,  0.1,  0.1],
+                       safeLowerBound: List[float]=[-0.5, -0.5, -np.pi],
+                       safeUpperBound: List[float]=[ 2.0,  2.0,  np.pi],
+                       controlLowerBound: List[float]=[-0.1],
+                       controlUpperBound: List[float]=[ 0.1],
+                       **kwargs):
+        super().__init__(pathToExecutable,
+                         initLowerBound,
+                         initUpperBound,
+                         goalLowerBound,
+                         goalUpperBound,
+                         safeLowerBound,
+                         safeUpperBound,
+                         controlLowerBound,
+                         controlUpperBound,
+                         system="DubinsCarWithAcceleration",
+                         **kwargs)
+
+
+class Unicycle(OMPLEnv):
+    def __init__(self, pathToExecutable: str,
+                       initLowerBound: List[float]=[-0.05, 0.95, -0.05],
+                       initUpperBound: List[float]=[ 0.05, 1.05,  0.05],
+                       goalLowerBound: List[float]=[1.0, -0.1, -0.1],
+                       goalUpperBound: List[float]=[2.0,  0.1,  0.1],
+                       safeLowerBound: List[float]=[-0.5, -0.5, -np.pi],
+                       safeUpperBound: List[float]=[ 2.0,  2.0,  np.pi],
+                       controlLowerBound: List[float]=[-0.1],
+                       controlUpperBound: List[float]=[ 0.1],
+                       **kwargs):
+        super().__init__(pathToExecutable,
+                         initLowerBound,
+                         initUpperBound,
+                         goalLowerBound,
+                         goalUpperBound,
+                         safeLowerBound,
+                         safeUpperBound,
+                         controlLowerBound,
+                         controlUpperBound,
+                         system="Unicycle",
+                         **kwargs)
 
 
 register(
-     id="ompl/Drone-v0",
-     entry_point="sciab.env.omplenv:DroneEnv",
+     id="ompl/DubinsCar-v0",
+     entry_point="sciab.env.omplenv:DubinsCar",
      max_episode_steps=50,
 )

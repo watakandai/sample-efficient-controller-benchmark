@@ -18,22 +18,24 @@ class CounterSampler(metaclass=ABCMeta):
 
 
 """CounterExample struct"""
-class BaseCounterExample(CounterExample): pass
+class BaseCounterExample(CounterExample):
+    def __init__(self, x):
+        self.x = x
 
 
 class FirstXOfRandomTrajSampler(CounterSampler):
     def sample(self, result: VerifierResult) -> CounterExample:
         trajs = result.trajectories
-        unsafeTraj = filter(lambda t: t["status"]!=SimStatus.SIM_TERMINATED, trajs)
+        unsafeTraj = list(filter(lambda t: t["status"]!=SimStatus.SIM_TERMINATED, trajs))
         traj = random.choice(unsafeTraj)
-        x = traj.X[0]
+        x = traj["X"][0]
         return BaseCounterExample(x)
 
 
 class RandomXOfRandomTrajSampler(CounterSampler):
     def sample(self, result: VerifierResult) -> CounterExample:
         trajs = result.trajectories
-        unsafeTraj = filter(lambda t: t["status"]!=SimStatus.SIM_TERMINATED, trajs)
+        unsafeTraj = list(filter(lambda t: t["status"]!=SimStatus.SIM_TERMINATED, trajs))
         traj = random.choice(unsafeTraj)
         x = random.choice(traj.X)
         return BaseCounterExample(x)

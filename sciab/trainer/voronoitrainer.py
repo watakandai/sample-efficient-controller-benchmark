@@ -12,10 +12,10 @@ from ..env.omplenv import OMPLEnv
 
 class VoronoiTrainer(Trainer):
     def __init__(self, env: OMPLEnv):
-        super().__init__()
-        self.env = env
+        super().__init__(env)
+        self.controller = VoronoiController()
 
     def train(self, counterexample: CounterExample) -> VoronoiController:
         X, U, Dt = self.env.sample(counterexample.x)
-        self._controller.update(X, U, Dt)
-        return self._controller
+        self.controller.update(X, U, Dt)
+        return self.controller
