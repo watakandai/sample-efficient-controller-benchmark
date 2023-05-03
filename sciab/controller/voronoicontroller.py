@@ -83,7 +83,7 @@ class VoronoiNode:
         return False
 
 
-class VoronoiController(Controller):
+class VoronoiTreeController(Controller):
     """Controller struct"""
     root: VoronoiNode = None
     def __init__(self, **kwargs):
@@ -118,3 +118,27 @@ class VoronoiController(Controller):
             self.root = VoronoiNode(x, u, np.array([]), np.array([]))
         else:
             self.root.addPoint(x, u)
+
+
+class VoronoiController(Controller):
+    """Controller struct"""
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.X = []
+        self.U = []
+
+    def action(self, x: List[float]) -> List[float]:
+        if len(self.X) == 0:
+            raise Exception("No data point is added")
+
+        idx = np.argmin(list(map(lambda x: np.linalg.norm(x - x), self.X)))
+        return self.U[idx]
+
+    def update(self, X, U, Dt) -> List[float]:
+        if len(X) == 0 or len(U) == 0:
+            print("Skipping ... The trajectory is empty")
+
+        x, u = X[0], U[0]
+
+        self.X.append(x)
+        self.U.append(u)

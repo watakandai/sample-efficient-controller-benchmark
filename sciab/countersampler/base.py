@@ -5,9 +5,11 @@ from ..verifier.base import VerifierResult
 from .. import SimStatus
 
 
-class CounterExample(metaclass=ABCMeta):
+class CounterExample():
     """CounterExample struct"""
     x: List[float]
+    def __init__(self, x):
+        self.x = x
 
 
 class CounterSampler(metaclass=ABCMeta):
@@ -17,19 +19,13 @@ class CounterSampler(metaclass=ABCMeta):
         raise NotImplementedError()
 
 
-"""CounterExample struct"""
-class BaseCounterExample(CounterExample):
-    def __init__(self, x):
-        self.x = x
-
-
 class FirstXOfRandomTrajSampler(CounterSampler):
     def sample(self, result: VerifierResult) -> CounterExample:
         trajs = result.trajectories
         unsafeTraj = list(filter(lambda t: t["status"]!=SimStatus.SIM_TERMINATED, trajs))
         traj = random.choice(unsafeTraj)
         x = traj["X"][0]
-        return BaseCounterExample(x)
+        return CounterExample(x)
 
 
 class RandomXOfRandomTrajSampler(CounterSampler):
@@ -38,4 +34,11 @@ class RandomXOfRandomTrajSampler(CounterSampler):
         unsafeTraj = list(filter(lambda t: t["status"]!=SimStatus.SIM_TERMINATED, trajs))
         traj = random.choice(unsafeTraj)
         x = random.choice(traj.X)
-        return BaseCounterExample(x)
+        return CounterExample(x)
+
+class RandomX0TrajSampler(CounterSampler):
+    def __init__(self, env):
+        self.env = env
+
+    def sample(self, result: VerifierResult) -> CounterExample:
+        return CounterExample(self.env.randX0())

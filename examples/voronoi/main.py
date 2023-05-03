@@ -4,20 +4,12 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 EXAMPLE_DIR = os.path.dirname(CURRENT_DIR)
 HOME_DIR = os.path.dirname(EXAMPLE_DIR)
 sys.path.append(HOME_DIR)
+import time
 import gymnasium as gym
-import argparse
-from sciab.countersampler.base import BaseCounterExample, FirstXOfRandomTrajSampler
+from sciab.countersampler.base import CounterExample, FirstXOfRandomTrajSampler
 from sciab.trainer.voronoitrainer import VoronoiTrainer
 from sciab.verifier.probabilisticverifier import ProbabilisticVerifier
-
-
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("pathToExecutable", type=str)
-    parser.add_argument("envName", type=str)
-    parser.add_argument('-ns', '--numSample', type=int, default=10)
-    # parser.add_argument('-v', '--verbose', action='store_true')
-    return parser.parse_args()
+from sciab import util
 
 
 def main(pathToExecutable, envName, numSample):
@@ -29,8 +21,9 @@ def main(pathToExecutable, envName, numSample):
     verifier = ProbabilisticVerifier(env, numSample)
     countersampler = FirstXOfRandomTrajSampler()
 
-    counterexample = BaseCounterExample(x=env.reset())
+    counterexample = CounterExample(x=env.reset())
     counter = 0
+    start = time.time()
 
     while True:
 
@@ -49,7 +42,9 @@ def main(pathToExecutable, envName, numSample):
         counterexample = countersampler.sample(result)
         counter += 1
 
+    elapsedTime = time.time() - start
+    print(f"{envName}: #Samples={counter}, ElapsedTime={elapsedTime}")
 
 if __name__ == '__main__':
-    args = parse_args()
+    args = util.parse_args()
     main(args.pathToExecutable, args.envName, args.numSample)

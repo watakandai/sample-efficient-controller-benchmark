@@ -4,11 +4,6 @@ from ..controller.voronoicontroller import VoronoiController
 from ..env.omplenv import OMPLEnv
 
 
-# class VoronoiTrainerArguments(TrainerArguments):
-#     """Arguments struct"""
-#     def __init__(self, **kwargs):
-#         super().__init__(**kwargs)
-
 
 class VoronoiTrainer(Trainer):
     def __init__(self, env: OMPLEnv):
@@ -16,6 +11,6 @@ class VoronoiTrainer(Trainer):
         self.controller = VoronoiController()
 
     def train(self, counterexample: CounterExample) -> VoronoiController:
-        X, U, Dt = self.env.sample(counterexample.x)
+        X, A, U, Dt = self.env.sampleTrajectory(counterexample.x)
         self.controller.update(X, U, Dt)
         return self.controller

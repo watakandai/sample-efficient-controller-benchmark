@@ -1,3 +1,4 @@
+import numpy as np
 from multiprocessing.pool import ThreadPool
 from typing import List, Dict
 from .base import Verifier, VerifierResult
@@ -29,12 +30,11 @@ class ProbabilisticVerifier(Verifier):
         t.close()
 
         trajectories = list(rs)
-        # with Pool(16) as p:
-        #     trajectories = p.map(f, range(numSample))
-        # trajectories = [self.simulate(controller, i) for i in range(numSample)]
-
         safeTraj = list(filter(lambda t: t["status"]==SimStatus.SIM_TERMINATED, trajectories))
-        verified = len(safeTraj) / len(trajectories) == 1
+        safeTrajProb = len(safeTraj) / len(trajectories)
+        verified = safeTrajProb == 1
+
+        print("safeTrajProb: ", safeTrajProb)
 
         return ProbabilisticVerifierResult(
             verified=verified,
@@ -47,13 +47,12 @@ class ProbabilisticVerifier(Verifier):
         d = False
 
         while not d:
-            assert(len(x) == 3), info["output"]
             u = controller.action(x) # In our case, it will either return an int or List[float]
             nx, r, done, truncated, info = self.env.step(u)
             d = done or truncated
             X.append(nx)
             x = nx
 
-        print(f"iteration={iter}, status={info['status']}, start={X[0]}, end={X[-1]}")
+        # print(f"iteration={iter}, status={info['status']}, start={X[0]}, end={X[-1]}\n{np.array(X)}")
 
         return {"X": X, "status": info["status"]}

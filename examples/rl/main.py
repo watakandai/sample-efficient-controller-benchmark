@@ -1,40 +1,50 @@
-import argparse
-from sciab.env.rlenv import RLEnv, RLEnvArguments
-from sciab.countersampler.base import BaseCounterExample, FirstXOfRandomTrajSampler
+import os
+import sys
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+EXAMPLE_DIR = os.path.dirname(CURRENT_DIR)
+HOME_DIR = os.path.dirname(EXAMPLE_DIR)
+sys.path.append(HOME_DIR)
+import time
+import gymnasium as gym
+from sciab.countersampler.base import CounterExample, FirstXOfRandomTrajSampler
 from sciab.trainer.rltrainer import RLTrainer
 from sciab.verifier.probabilisticverifier import ProbabilisticVerifier
+from sciab import util
 
 
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("system", type=str, required=True)
-    parser.add_argument('-ns', '--numSample', type=int, default=100)
-    # parser.add_argument('-v', '--verbose', action='store_true')
-    return parser.parse_args()
+def main(pathToExecutable, envName, numSample):
+    print("pathToExecutable: ", pathToExecutable, "Env: ", envName)
+    env = gym.make(envName, pathToExecutable=pathToExecutable)
 
-
-def main(system, numSample):
-    # TODO: OMPL Env
-    eargs = RLEnvArguments(system)
-    env = RLEnv(eargs)
     trainer = RLTrainer(env)
     verifier = ProbabilisticVerifier(env, numSample)
     countersampler = FirstXOfRandomTrajSampler()
 
-    counterexample = BaseCounterExample(x=env.reset())
+    counterexample = CounterExample(x=env.reset())
     counter = 0
+    start = time.time()
 
     while True:
+
+        print("counter: ", counter)
+
+        print("training...")
         controller = trainer.train(counterexample)
+
+        print("verifying...")
         result = verifier.verify(controller)
+
         if result.verified:
             break
+
+        print("finding a counterexample...")
         counterexample = countersampler.sample(result)
         counter += 1
 
-    print(f"{args.system}: #Samples={counter}")
+    elapsedTime = time.time() - start
+    print(f"{envName}: #Samples={counter}, ElapsedTime={elapsedTime}")
 
 
 if __name__ == '__main__':
-    args = parse_args()
-    main(args.system, args.numSample)
+    args = util.parse_args()
+    main(args.pathToExecutable, args.envName, args.numSample)
