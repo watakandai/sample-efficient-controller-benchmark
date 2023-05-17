@@ -44,3 +44,22 @@ Must pass a path to the ompl executable.
 ```bash
 --pathToExecutable /home/kandai/Documents/projects/dev/ControlLyapunovFunctionPlanners/build/DubinsCar
 ```
+
+# Result
+
+#### Voronoi:
+
+2023-05-11 00:23:18,645 [INFO]: ompl/Car2D-v0: #Samples=4, ElapsedTime=107.58417391777039
+2023-05-16 12:03:01,278 [INFO]: ompl/DubinsCar-v0: #Samples=33, ElapsedTime=1278.616891860962
+2023-05-16 18:53:24,954 [INFO]: ompl/DubinsCarWithAcceleration-v0: #Samples=289, ElapsedTime=23736.698593616486
+ompl/Unicycle-v0: #Samples>500 ....
+CartPole 0 chance after 900 iterations...
+
+#### RL:
+
+algorithm,env,iterations,time
+ompl/Car2D-v0,107,2156.3760409355164
+ompl/DubinsCar-v0,307,1327.3937578201294
+ompl/DubinsCarWithAcceleration-v0,163,596.0054759979248
+ompl/Unicycle-v0,152,5401.479188919067
+ompl/CartPole-v0,229,3082.3583188056946

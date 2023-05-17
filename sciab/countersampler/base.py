@@ -1,3 +1,4 @@
+import copy
 import random
 from abc import ABCMeta, abstractmethod
 from typing import Dict, List
@@ -33,12 +34,16 @@ class RandomXOfRandomTrajSampler(CounterSampler):
         trajs = result.trajectories
         unsafeTraj = list(filter(lambda t: t["status"]!=SimStatus.SIM_TERMINATED, trajs))
         traj = random.choice(unsafeTraj)
-        x = random.choice(traj.X)
+        x = random.choice(traj["X"])
         return CounterExample(x)
 
-class RandomX0TrajSampler(CounterSampler):
+class RandomXTrajSampler(CounterSampler):
     def __init__(self, env):
-        self.env = env
+        self.env = copy.deepcopy(env)
 
     def sample(self, result: VerifierResult) -> CounterExample:
-        return CounterExample(self.env.randX0())
+        numState = len(self.env.initLowerBound)
+        x = self.env.initLowerBound + self.env.np_random.random(numState) * \
+            (self.env.initUpperBound - self.env.initLowerBound)
+
+        return CounterExample(x)

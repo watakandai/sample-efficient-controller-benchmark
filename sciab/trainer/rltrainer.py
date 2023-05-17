@@ -4,16 +4,17 @@ from .base import Trainer
 from ..countersampler.base import CounterExample
 from ..controller.rlcontroller import RLController
 from ..controller.replaybuffer import ReplayBuffer
+from .. import SimStatus
 
 
 # This is more like a TD3 Trainer. I don't care for now.
 class RLTrainer(Trainer):
     def __init__(self, env,
-                 startTrainingEpisode: int=5,
+                 startTrainingEpisode: int=100,
                  modelPath: str="model/rl",
                  date: str=datetime.today().strftime('%Y-%m-%d'),
                  bufferSize: int=int(1e6),
-                 batchSize: int=100):
+                 batchSize: int=1000):
         super().__init__(env)
         self.env = env
         self.counter = 0
@@ -23,12 +24,17 @@ class RLTrainer(Trainer):
         action_dim = env.action_space.shape[0]
         max_action = float(env.action_space.high[0])
         scale = max_action * np.ones(action_dim)
+        # scale = env.action_space.high
 
         self.controller = RLController(
             state_dim,
             action_dim,
             scale,
-            '_'.join([modelPath, date]))
+            '_'.join([modelPath, date]),
+            actor_lr=0.001,
+            critic_lr=0.01,
+            expl_noise=0.01,        # 1 %
+            policy_noise=0.02)      # 2 %
 
         self.replay_buffer = ReplayBuffer(
             state_dim,
@@ -41,20 +47,32 @@ class RLTrainer(Trainer):
 
         s = self.env.reset()
         done = False
+        reward = 0.0
+        step = 0
 
         while not done:
 
             if self.counter < self.startTrainingEpisode:
                 a = self.env.action_space.sample()
             else:
-                a = self.controller.action(s)
+                a = self.controller.action_with_noise(s)
 
             ns, r, d, t, info = self.env.step(a)
-            done = d or t
+            done = d # or t
+            reward += r
             self.replay_buffer.append(s, a, ns, r, done)
 
-            if self.counter < self.startTrainingEpisode:
-                self.controller.update(self.replay_buffer)
+            if info["status"] == SimStatus.SIM_TERMINATED:
+                print(s, a, ns, r, d, t, info)
+
+            if self.counter > self.startTrainingEpisode:
+                losses = self.controller.update(self.replay_buffer)
+            step += 1
+            s = ns
+
+        if self.counter > self.startTrainingEpisode and \
+            self.counter % 1 == 0:
+            print(f"Episode {self.counter}, TotalReward: {reward:.2f}, AveReward: {reward/step:.2f}, LastState: {ns}, Loss: {losses}")
 
         self.counter += 1
         return self.controller

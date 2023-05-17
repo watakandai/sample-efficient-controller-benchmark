@@ -1,2 +1,11 @@
 **/*.pyc
 **/__pycache__/**
+**/tmp/**
+**/dist/**
+**/*.egg-info
+**/*.log
+**/*.csv
+**/*.png
+**/*.json
+**/*.DS_Store
+.vscode/*

@@ -1,5 +1,6 @@
 import os
 import torch
+import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 from .base import Controller
@@ -144,6 +145,7 @@ class RLController(Controller):
         critic1_loss = F.mse_loss(current_Q1, target_Q_detached)
         critic2_loss = F.mse_loss(current_Q2, target_Q_detached)
         critic_loss = critic1_loss + critic2_loss
+        # print("critic1_loss: ", critic1_loss)
 
         self.critic1_optimizer.zero_grad()
         self.critic2_optimizer.zero_grad()
@@ -155,6 +157,7 @@ class RLController(Controller):
             a = self.actor(states)
             Q1 = self.critic1(states, a)
             actor_loss = -Q1.mean()
+            # print("actor_loss: ", actor_loss)
 
             self.actor_optimizer.zero_grad()
             actor_loss.backward()
@@ -174,9 +177,13 @@ class RLController(Controller):
 
         if to_numpy:
             # return action.cpu().data.numpy().squeeze()
-            return action.cpu().data.numpy()
+            a = action.cpu().data.numpy().squeeze()
+            if np.size(a) == 1:
+                return np.array([a])
+            return a
+            # return action.cpu().data.numpy().squeeze()
 
-        # return action.squeeze()
+        # a = action.squeeze()
         return action
 
     def action_with_noise(self, state, to_numpy=True):
@@ -188,8 +195,10 @@ class RLController(Controller):
         action = torch.max(action, -self.actor.scale)
 
         if to_numpy:
-            # return action.cpu().data.numpy().squeeze()
-            return action.cpu().data.numpy()
+            a = action.cpu().data.numpy().squeeze()
+            if np.size(a) == 1:
+                return np.array([a])
+            return a
 
         # return action.squeeze()
         return action

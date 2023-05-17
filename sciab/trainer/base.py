@@ -1,3 +1,4 @@
+import copy
 from abc import ABCMeta, abstractmethod
 from ..countersampler.base import CounterExample
 from ..controller.base import Controller
@@ -13,10 +14,11 @@ class Trainer(metaclass=ABCMeta):
     """Trainer samples a trajectory and updates the controller"""
     controller: Controller = None
     env: OMPLEnv = None
+    startTrainingEpisode: int = 0
 
     @abstractmethod
     def __init__(self, env: OMPLEnv) -> Controller:
-        self.env = env
+        self.env = copy.deepcopy(env)
 
 
     @abstractmethod
