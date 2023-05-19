@@ -24,14 +24,22 @@ if __name__ == '__main__':
                         format='%(asctime)s [%(levelname)s]: %(message)s')
 
     csv_filename = "benchmark.csv"
-    util.write_header(csv_filename, print_outputs=True)
+    column_labels = ['algorithm', 'env', '# iterations', 'time',
+                     '# states', '# actions',
+                     'initLB', 'initUB',
+                     'termLB', 'termUB',
+                     'safeLB', 'safeUB',
+                     'controlLB', 'controlUB',
+                     'dt']
+    util.write_header(column_labels, csv_filename, print_outputs=True)
     f = open(csv_filename, 'a+')
 
     stats = util.selectModulesAndRunExperiment(args.pathToExecutable,
                                           args.algorithm,
                                           args.envName,
                                           args.numSample,
-                                          filedir if args.plot else None)
+                                          filedir,
+                                          args.plot)
 
     msg = ','.join([str(col) for col in stats])
     f.write(msg+'\n')

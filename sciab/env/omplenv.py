@@ -119,7 +119,7 @@ class OMPLEnv(gym.Env):
 
         p = Path(self.outputFile)
         p.parent.mkdir(parents=True, exist_ok=True)
-        file = p.parent.joinpath(p.stem + str(ind) + f.suffix) if ind else p
+        file = p.parent.joinpath(p.stem + str(ind) + p.suffix) if ind else p
 
         kwargs = {"system":                 self.system,
                   "start":                  npToStr(x),
@@ -477,12 +477,12 @@ class Unicycle(OMPLEnv):
 """X=[x,y,v,phi,theta], U=[acceleration, handleAngle]"""
 class UnicycleWithConstraint(OMPLEnv):
     def __init__(self, pathToExecutable: str,
-                       initLowerBound: List[float]=[-0.05, 0.95, -0.1, -0.1, -0.1],
-                       initUpperBound: List[float]=[ 0.05, 1.05,  0.1, -0.1, -0.1],
-                       goalLowerBound: List[float]=[1.4, 1.4, -0.5, -3.14, -3.14],
-                       goalUpperBound: List[float]=[1.6, 1.6,  0.5,  3.14, 3.14],
-                       safeLowerBound: List[float]=[-0.5, -0.5, -1.0, -1.0, -3.14],
-                       safeUpperBound: List[float]=[ 2.0,  2.5,  1.0, 1.0, 3.14],
+                       initLowerBound: List[float]=[-0.05, -0.05, -0.1, -0.1, -0.1],
+                       initUpperBound: List[float]=[ 0.05,  0.05,  0.1, -0.1, -0.1],
+                       goalLowerBound: List[float]=[0.3, 0.3, -0.5, -0.9, -3.14],
+                       goalUpperBound: List[float]=[0.5, 0.5,  0.5,  0.9,  3.14],
+                       safeLowerBound: List[float]=[-0.1, -0.1, -1.0, -1.0, -3.14],
+                       safeUpperBound: List[float]=[ 0.6,  0.6,  1.0,  1.0,  3.14],
                        controlLowerBound: List[float]=[-1.0, -1.0],
                        controlUpperBound: List[float]=[ 1.0,  1.0],
                        stateWeight: List[float]=[1, 1, 0, 0, 0],
@@ -720,8 +720,8 @@ class Drone2D(OMPLEnv):
     def __init__(self, pathToExecutable: str,
                        initLowerBound: List[float]=[ 0.2,  0.2,   np.pi*0.1, -0.05, -0.05, -0.05],
                        initUpperBound: List[float]=[ 0.25,  0.25, np.pi*0.2,  0.05,  0.05,  0.05],
-                       goalLowerBound: List[float]=[-0.05, -0.05, -0.05, -0.1, -0.1, -0.1],
-                       goalUpperBound: List[float]=[-0.05,  0.05,  0.05,  0.1,  0.1,  0.1],
+                       goalLowerBound: List[float]=[-0.05, -0.05, -0.05, -10, -10, -10],
+                       goalUpperBound: List[float]=[-0.05,  0.05,  0.05,  10,  10,  10],
                        safeLowerBound: List[float]=[-0.3, -0.3, -np.pi*0.3, -1.5, -1.5, -0.9],
                        safeUpperBound: List[float]=[ 0.3,  0.3,  np.pi*0.3,  1.5,  1.5,  0.9],
                        controlLowerBound: List[float]=[0, 0],

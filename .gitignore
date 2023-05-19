@@ -9,3 +9,5 @@
 **/*.json
 **/*.DS_Store
 .vscode/*
+**/*.npy
+**/*.h5

@@ -63,3 +63,20 @@ ompl/DubinsCar-v0,307,1327.3937578201294
 ompl/DubinsCarWithAcceleration-v0,163,596.0054759979248
 ompl/Unicycle-v0,152,5401.479188919067
 ompl/CartPole-v0,229,3082.3583188056946
+
+Input Mean for RL::
+Env: Car2D, successRate: 1.0, Mean: [0.6621944]
+Env: DubinsCar, successRate: 1.0, Mean: [0.38691995]
+Env: DubinsCarWithAcceleration, successRate: 1.0, Mean: [0.70344824 0.22804886]
+Env: Unicycle, successRate: 1.0, Mean: [0.69036293 0.37582266]
+Env: UnicycleWithConstraint, successRate: 1.0, Input Mean: [0.4992313  0.41291764]
+
+Input Mean for OMPL:
+Env: Car2D, Input Mean: [0.66497264]
+Env: DubinsCar, Input Mean: [0.69977616]
+
+
+
+# Current Goal is to use MPC (as a Trainer and an env?)
+
+Env -> Trainer(Controller, Env) -> Verifier -> Sampler

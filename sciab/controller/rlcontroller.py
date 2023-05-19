@@ -2,6 +2,7 @@ import os
 import torch
 import numpy as np
 import torch.nn as nn
+from pathlib import Path
 import torch.nn.functional as F
 from .base import Controller
 
@@ -28,7 +29,6 @@ class RLController(Controller):
             state_dim,
             action_dim,
             scale,
-            model_path,
             actor_lr=0.0001,
             critic_lr=0.001,
             expl_noise=0.1,
@@ -40,7 +40,6 @@ class RLController(Controller):
         super().__init__()
 
         self.scale = scale
-        self.model_path = model_path
 
         # parameters
         self.expl_noise = expl_noise
@@ -83,34 +82,25 @@ class RLController(Controller):
         for target_param, origin_param in zip(target.parameters(), origin.parameters()):
             target_param.data.copy_(tau * origin_param.data + (1.0 - tau) * target_param.data)
 
-    def save(self, timestep=None):
-        if not os.path.exists(os.path.dirname(self.model_path)):
-            os.mkdir(os.path.dirname(self.model_path))
+    def save(self, filedir):
 
-        if timestep:
-            model_path = self.model_path + '_%i'%(timestep)
-        else:
-            model_path = self.model_path
+        Path(filedir).mkdir(parents=True, exist_ok=True)
 
-        torch.save(self.actor.state_dict(), model_path+"_actor.h5")
-        torch.save(self.actor_optimizer.state_dict(), model_path+"_actor_optimizer.h5")
-        torch.save(self.critic1.state_dict(), model_path+"_critic1.h5")
-        torch.save(self.critic2.state_dict(), model_path+"_critic2.h5")
-        torch.save(self.critic1_optimizer.state_dict(), model_path+"_critic1_optimizer.h5")
-        torch.save(self.critic2_optimizer.state_dict(), model_path+"_critic2_optimizer.h5")
+        torch.save(self.actor.state_dict(), os.path.join(filedir, "_actor.h5"))
+        torch.save(self.actor_optimizer.state_dict(), os.path.join(filedir, "_actor_optimizer.h5"))
+        torch.save(self.critic1.state_dict(), os.path.join(filedir, "_critic1.h5"))
+        torch.save(self.critic2.state_dict(), os.path.join(filedir, "_critic2.h5"))
+        torch.save(self.critic1_optimizer.state_dict(), os.path.join(filedir, "_critic1_optimizer.h5"))
+        torch.save(self.critic2_optimizer.state_dict(), os.path.join(filedir, "_critic2_optimizer.h5"))
 
-    def load(self, timestep=-1):
-        if timestep>0:
-            model_path = self.model_path + '_%i'%(timestep)
-        else:
-            model_path = self.model_path
+    def load(self, filedir):
 
-        self.actor.load_state_dict(torch.load(model_path+"_actor.h5"))
-        self.actor_optimizer.load_state_dict(torch.load(model_path+"_actor_optimizer.h5"))
-        self.critic1.load_state_dict(torch.load(model_path+"_critic1.h5"))
-        self.critic2.load_state_dict(torch.load(model_path+"_critic2.h5"))
-        self.critic1_optimizer.load_state_dict(torch.load(model_path+"_critic1_optimizer.h5"))
-        self.critic2_optimizer.load_state_dict(torch.load(model_path+"_critic2_optimizer.h5"))
+        self.actor.load_state_dict(torch.load(os.path.join(filedir, "_actor.h5")))
+        self.actor_optimizer.load_state_dict(torch.load(os.path.join(filedir, "_actor_optimizer.h5")))
+        self.critic1.load_state_dict(torch.load(os.path.join(filedir, "_critic1.h5")))
+        self.critic2.load_state_dict(torch.load(os.path.join(filedir, "_critic2.h5")))
+        self.critic1_optimizer.load_state_dict(torch.load(os.path.join(filedir, "_critic1_optimizer.h5")))
+        self.critic2_optimizer.load_state_dict(torch.load(os.path.join(filedir, "_critic2_optimizer.h5")))
 
     def update(self, replay_buffer, iterations=1):
         if not self._initialized:

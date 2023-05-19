@@ -1,5 +1,7 @@
+import os
 import time
 import numpy as np
+from pathlib import Path
 from typing import List, Type
 from abc import ABCMeta, abstractmethod
 from .base import Controller
@@ -151,3 +153,26 @@ class VoronoiController(Controller):
         self.nX.append(nx)
         self.Dt.append(dt)
 
+    def save(self, filedir: str=None):
+        Path(filedir).parent.mkdir(parents=True, exist_ok=True)
+
+        fileX = os.path.join(filedir, "X")
+        fileU = os.path.join(filedir, "U")
+        filenX = os.path.join(filedir, "nX")
+        fileDt = os.path.join(filedir, "Dt")
+
+        np.save(fileX, np.array(self.X, dtype=object), allow_pickle=True)
+        np.save(fileU, np.array(self.U, dtype=object), allow_pickle=True)
+        np.save(filenX, np.array(self.nX, dtype=object), allow_pickle=True)
+        np.save(fileDt, np.array(self.Dt, dtype=object), allow_pickle=True)
+
+    def load(self, filedir: str=None):
+        fileX = os.path.join(filedir, "X")
+        fileU = os.path.join(filedir, "U")
+        filenX = os.path.join(filedir, "nX")
+        fileDt = os.path.join(filedir, "Dt")
+
+        self.X = np.load(fileX, allow_pickle=True)
+        self.U = np.load(fileU, allow_pickle=True)
+        self.nX = np.load(filenX, allow_pickle=True)
+        self.Dt = np.load(fileDt, allow_pickle=True)

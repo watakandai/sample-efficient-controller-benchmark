@@ -31,6 +31,7 @@ def parse_benchmark_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("pathToExecutable", type=str)
     parser.add_argument('-ns', '--numSample', type=int, default=100)
+    parser.add_argument('--plot', action='store_true')
     return parser.parse_args()
 
 
@@ -55,15 +56,8 @@ def selectCounterExampleSampler(env, algorithm):
         raise Exception("Unknown algorithm: ", algorithm)
 
 
-def write_header(csv_filename, print_outputs=True):
+def write_header(column_labels, csv_filename, print_outputs=True):
 
-    column_labels = ['algorithm', 'env', '# iterations', 'time',
-                     '# states', '# actions',
-                     'initLB', 'initUB',
-                     'termLB', 'termUB',
-                     'safeLB', 'safeUB',
-                     'controlLB', 'controlUB',
-                     'dt']
     msg = ','.join(column_labels) + '\n'
 
     if os.path.exists(csv_filename):
@@ -81,7 +75,7 @@ def write_header(csv_filename, print_outputs=True):
     f.close()
 
 
-def runExperiment(env, trainer, verifier, countersampler, timeout=None):
+def runExperiment(env, trainer, verifier, countersampler, filedir, timeout=None):
 
     counter = 0
     counterexample = CounterExample(x=env.reset())
@@ -95,18 +89,18 @@ def runExperiment(env, trainer, verifier, countersampler, timeout=None):
             return counter, "N/A"
 
         msg = f"training..."
-        logging.debug(msg)
+        # logging.debug(msg)
         controller = trainer.train(counterexample)
 
         if counter >= trainer.startTrainingEpisode:
             msg = f"verifying..."
-            logging.debug(msg)
+            # logging.debug(msg)
             result = verifier.verify(controller)
 
             if result.verified: break
 
             msg = f"finding a counterexample..."
-            logging.debug(msg)
+            # logging.debug(msg)
             counterexample = countersampler.sample(result)
         else:
             msg = f"skipping verification..."
@@ -114,23 +108,23 @@ def runExperiment(env, trainer, verifier, countersampler, timeout=None):
             counterexample = CounterExample(x=env.reset())
 
         counter += 1
-
+    controller.save(filedir)
     return counter, time.time() - start
 
 
-def selectModulesAndRunExperiment(pathToExecutable, algorithm, envName, numSample, filedir):
+def selectModulesAndRunExperiment(pathToExecutable, algorithm, envName, numSample, filedir, plot):
 
     print("pathToExecutable: ", pathToExecutable, "Env: ", envName)
     env = gym.make(envName, pathToExecutable=pathToExecutable)
-    trainer = selectAlgorithm(env, algorithm, filedir=filedir)
-    verifier = ProbabilisticVerifier(env, numSample, filedir=filedir)
+    trainer = selectAlgorithm(env, algorithm, filedir=filedir if plot else None)
+    verifier = ProbabilisticVerifier(env, numSample, filedir=filedir if plot else None)
     countersampler = selectCounterExampleSampler(env, algorithm)
 
     msg = f"Env: {envName}, Algorithm: {algorithm}, Verifier: {type(verifier)}, CounterSampler: {type(countersampler)} NumSample: {numSample}"
     logging.info(msg)
     print(msg)
 
-    counter, elapsedTime = runExperiment(env, trainer, verifier, countersampler)
+    counter, elapsedTime = runExperiment(env, trainer, verifier, countersampler, filedir)
 
     stats = [algorithm, envName, counter, elapsedTime,
               env.observation_space.shape[0], env.action_space.shape[0],

@@ -11,3 +11,7 @@ class Controller(metaclass=ABCMeta):
     @abstractmethod
     def update(self, *args, **kwargs) -> List[float]:
         pass
+
+    @abstractmethod
+    def save(self, filedir: str=None):
+        pass

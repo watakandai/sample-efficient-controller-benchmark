@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 from datetime import datetime
 from .base import Trainer
@@ -11,8 +12,6 @@ from .. import SimStatus
 class RLTrainer(Trainer):
     def __init__(self, env,
                  startTrainingEpisode: int=100,
-                 modelPath: str="model/rl",
-                 date: str=datetime.today().strftime('%Y-%m-%d'),
                  bufferSize: int=int(1e6),
                  batchSize: int=1000):
         super().__init__(env)
@@ -30,7 +29,6 @@ class RLTrainer(Trainer):
             state_dim,
             action_dim,
             scale,
-            '_'.join([modelPath, date]),
             actor_lr=0.001,
             critic_lr=0.01,
             expl_noise=0.01,        # 1 %
@@ -64,6 +62,7 @@ class RLTrainer(Trainer):
 
             if info["status"] == SimStatus.SIM_TERMINATED:
                 print(s, a, ns, r, d, t, info)
+                logging.debug(f"{s}, {a}, {ns}, {r}, {d}, {t}, {info}")
 
             if self.counter > self.startTrainingEpisode:
                 losses = self.controller.update(self.replay_buffer)
@@ -72,7 +71,10 @@ class RLTrainer(Trainer):
 
         if self.counter > self.startTrainingEpisode and \
             self.counter % 1 == 0:
-            print(f"Episode {self.counter}, TotalReward: {reward:.2f}, AveReward: {reward/step:.2f}, LastState: {ns}, Loss: {losses}")
+            msg = f"Episode {self.counter}, TotalReward: {reward:.2f}, AveReward: {reward/step:.2f}, LastState: {ns}, Loss: {losses}"
+            print(msg)
+            logging.debug(msg)
+
 
         self.counter += 1
         return self.controller
